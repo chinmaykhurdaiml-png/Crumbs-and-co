@@ -1,0 +1,6 @@
+{
+  "name": "Crumb & Co. — Artisan Bakery & Patisserie",
+  "description": "Crumb & Co. is a boutique online bakery offering handcrafted artisan sourdough, gourmet cakes, French pastries, and fresh-baked cookies.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
