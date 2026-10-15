@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import { UpiPaymentQr } from '../components/UpiPaymentQr';
 import {
   ShoppingBag,
   Trash2,
@@ -15,6 +16,8 @@ import {
   CheckCircle2,
   Receipt,
   X,
+  QrCode,
+  CreditCard,
 } from 'lucide-react';
 
 export const CartPage: React.FC = () => {
@@ -40,13 +43,16 @@ export const CartPage: React.FC = () => {
   // Checkout modal state
   const [checkoutModalOpen, setCheckoutModalOpen] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
+  const [activePaymentTab, setActivePaymentTab] = useState<'upi' | 'cod'>('upi');
+
   const [orderDetails, setOrderDetails] = useState({
     name: 'Priya Sharma',
     phone: '+91 98201 55660',
     address: 'Flat 402, Magnolia Residency, Bandra West',
     deliverySlot: 'Tomorrow Morning (7:30 AM – 9:30 AM)',
     notes: 'Please ring the doorbell and leave with security if unavailable.',
-    paymentMode: 'Cash on Artisan Delivery',
+    paymentMode: 'PhonePe / UPI QR (Paid Online)',
+    paymentReference: '',
     orderNumber: 'CRUMB-84920',
   });
 
@@ -64,7 +70,23 @@ export const CartPage: React.FC = () => {
   const handleCompleteOrder = (e: React.FormEvent) => {
     e.preventDefault();
     const generatedOrderNum = `CRUMB-${Math.floor(100000 + Math.random() * 900000)}`;
-    setOrderDetails((prev) => ({ ...prev, orderNumber: generatedOrderNum }));
+    setOrderDetails((prev) => ({
+      ...prev,
+      orderNumber: generatedOrderNum,
+      paymentMode: activePaymentTab === 'upi' ? 'PhonePe / UPI QR' : 'Cash on Artisan Delivery',
+    }));
+    setOrderSuccess(true);
+  };
+
+  const handleUpiPaymentCompleted = (ref?: string) => {
+    const generatedOrderNum = `CRUMB-${Math.floor(100000 + Math.random() * 900000)}`;
+    setOrderDetails((prev) => ({
+      ...prev,
+      orderNumber: generatedOrderNum,
+      paymentMode: 'PhonePe / UPI QR (Verified)',
+      paymentReference: ref || `UPI-TXN-${Date.now().toString().slice(-6)}`,
+    }));
+    setCheckoutModalOpen(true);
     setOrderSuccess(true);
   };
 
@@ -170,8 +192,8 @@ export const CartPage: React.FC = () => {
 
       {/* Cart Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Items List */}
-        <div className="lg:col-span-7 xl:col-span-8 space-y-4">
+        {/* Items List Column */}
+        <div className="lg:col-span-7 xl:col-span-7 space-y-6">
           <div className="bg-white border border-[#39251F]/15 rounded-sm overflow-hidden shadow-xs">
             <div className="px-6 py-4 border-b border-[#39251F]/10 bg-[#FFF5E8]/40 flex items-center justify-between">
               <span className="text-xs uppercase tracking-wider font-semibold text-[#76584C]">
@@ -190,7 +212,10 @@ export const CartPage: React.FC = () => {
               {items.map(({ product, quantity }) => {
                 const itemSubtotal = product.price * quantity;
                 return (
-                  <div key={product.id} className="p-4 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div
+                    key={product.id}
+                    className="p-4 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+                  >
                     {/* Thumbnail and name */}
                     <div className="flex items-center gap-4">
                       <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-sm overflow-hidden bg-[#39251F]/5 shrink-0 border border-[#39251F]/10">
@@ -210,9 +235,7 @@ export const CartPage: React.FC = () => {
                         <h3 className="font-serif text-base sm:text-lg font-bold text-[#39251F] leading-snug">
                           {product.name}
                         </h3>
-                        <p className="text-xs text-[#76584C]">
-                          ₹{product.price} each
-                        </p>
+                        <p className="text-xs text-[#76584C]">₹{product.price} each</p>
                       </div>
                     </div>
 
@@ -268,13 +291,27 @@ export const CartPage: React.FC = () => {
           <div className="p-4 bg-[#FFF5E8] border border-[#39251F]/10 rounded-sm text-xs text-[#76584C] flex items-center gap-3">
             <Clock className="w-4 h-4 text-[#C58B52] shrink-0" />
             <span>
-              Orders placed now are scheduled for our tomorrow morning baking cycle. Packaged in unbleached biodegradable boxes.
+              Orders placed now are scheduled for our morning wood-fired baking cycle. Packaged in unbleached biodegradable boxes.
             </span>
+          </div>
+
+          {/* Feature Highlight: Dynamic PhonePe QR in Cart */}
+          <div className="hidden lg:block">
+            <div className="flex items-center gap-2 mb-3">
+              <QrCode className="w-4 h-4 text-[#C58B52]" />
+              <h3 className="font-serif text-base font-bold text-[#39251F]">
+                Quick Payment via PhonePe & UPI
+              </h3>
+            </div>
+            <UpiPaymentQr
+              amount={finalTotal}
+              onPaymentSuccess={handleUpiPaymentCompleted}
+            />
           </div>
         </div>
 
-        {/* Order Summary Column */}
-        <div className="lg:col-span-5 xl:col-span-4 space-y-4">
+        {/* Order Summary & Right Column */}
+        <div className="lg:col-span-5 xl:col-span-5 space-y-6">
           <div className="bg-white border border-[#39251F]/15 rounded-sm p-6 shadow-xs space-y-6">
             <h2 className="font-serif text-xl font-bold text-[#39251F] pb-3 border-b border-[#39251F]/10">
               Order Summary
@@ -291,7 +328,9 @@ export const CartPage: React.FC = () => {
                 <span className="flex items-center gap-1">
                   Artisan Delivery
                   {subtotal >= freeDeliveryThreshold && (
-                    <span className="text-[#89977A] text-[10px] font-bold uppercase">(Complimentary)</span>
+                    <span className="text-[#89977A] text-[10px] font-bold uppercase">
+                      (Complimentary)
+                    </span>
                   )}
                 </span>
                 <span className="font-semibold text-[#39251F]">
@@ -335,7 +374,7 @@ export const CartPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={removePromo}
-                    className="text-xs text-red-700 hover:underline font-semibold"
+                    className="text-xs text-red-700 hover:underline font-semibold cursor-pointer"
                   >
                     Remove
                   </button>
@@ -372,19 +411,29 @@ export const CartPage: React.FC = () => {
             </div>
 
             {/* Proceed to Checkout Button */}
-            <button
-              type="button"
-              onClick={() => setCheckoutModalOpen(true)}
-              className="w-full bg-[#C58B52] hover:bg-[#B27941] text-[#FFF5E8] font-bold text-sm py-3.5 px-4 rounded-sm transition-all shadow-sm hover:shadow-md flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <ShoppingBag className="w-4 h-4" />
-              <span>Proceed to Checkout (₹{finalTotal})</span>
-            </button>
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={() => setCheckoutModalOpen(true)}
+                className="w-full bg-[#C58B52] hover:bg-[#B27941] text-[#FFF5E8] font-bold text-sm py-3.5 px-4 rounded-sm transition-all shadow-sm hover:shadow-md flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <ShoppingBag className="w-4 h-4" />
+                <span>Proceed to Checkout (₹{finalTotal})</span>
+              </button>
 
-            <div className="pt-2 text-[11px] text-[#76584C] text-center flex items-center justify-center gap-2">
-              <ShieldCheck className="w-3.5 h-3.5 text-[#89977A]" />
-              <span>Safe demo checkout · No real payment collected</span>
+              <div className="text-[11px] text-[#76584C] text-center flex items-center justify-center gap-2">
+                <ShieldCheck className="w-3.5 h-3.5 text-[#89977A]" />
+                <span>Instant dynamic UPI QR code with auto-fetched amount</span>
+              </div>
             </div>
+          </div>
+
+          {/* Mobile Display of QR component */}
+          <div className="block lg:hidden">
+            <UpiPaymentQr
+              amount={finalTotal}
+              onPaymentSuccess={handleUpiPaymentCompleted}
+            />
           </div>
         </div>
       </div>
@@ -392,8 +441,8 @@ export const CartPage: React.FC = () => {
       {/* Checkout Modal / Order Confirmation Flow */}
       {checkoutModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#39251F]/60 backdrop-blur-xs animate-fade-in">
-          <div 
-            className="bg-[#FFF5E8] border border-[#39251F]/20 rounded-sm w-full max-w-xl max-h-[92vh] overflow-y-auto p-6 sm:p-8 shadow-2xl relative"
+          <div
+            className="bg-[#FFF5E8] border border-[#39251F]/20 rounded-sm w-full max-w-2xl max-h-[92vh] overflow-y-auto p-6 sm:p-8 shadow-2xl relative"
             onClick={(e) => e.stopPropagation()}
           >
             <button
@@ -416,10 +465,11 @@ export const CartPage: React.FC = () => {
                     Complete Your Bakery Order
                   </h2>
                   <p className="text-xs text-[#76584C] mt-1">
-                    Confirm your delivery address for tomorrow's freshly baked dispatch.
+                    Confirm your address and select your payment method for fresh morning dispatch.
                   </p>
                 </div>
 
+                {/* Delivery Information */}
                 <div className="space-y-4 text-xs">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
@@ -487,44 +537,84 @@ export const CartPage: React.FC = () => {
 
                     <div>
                       <label className="block font-semibold text-[#39251F] mb-1">
-                        Payment Preference
+                        Baker's Note / Door Instructions
                       </label>
-                      <select
-                        value={orderDetails.paymentMode}
+                      <input
+                        type="text"
+                        value={orderDetails.notes}
                         onChange={(e) =>
-                          setOrderDetails({ ...orderDetails, paymentMode: e.target.value })
+                          setOrderDetails({ ...orderDetails, notes: e.target.value })
                         }
+                        placeholder="e.g. Sourdough sliced, gate code 402"
                         className="w-full bg-white border border-[#39251F]/20 px-3 py-2 rounded-sm text-[#39251F] focus:outline-none focus:border-[#C58B52]"
-                      >
-                        <option>Cash on Artisan Delivery</option>
-                        <option>UPI / Card at Doorstep</option>
-                        <option>Demo Instant Pay</option>
-                      </select>
+                      />
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block font-semibold text-[#39251F] mb-1">
-                      Baker's Note / Door Instructions
+                  {/* Payment Mode Selector */}
+                  <div className="pt-2">
+                    <label className="block font-semibold text-[#39251F] mb-2">
+                      Select Payment Mode:
                     </label>
-                    <input
-                      type="text"
-                      value={orderDetails.notes}
-                      onChange={(e) =>
-                        setOrderDetails({ ...orderDetails, notes: e.target.value })
-                      }
-                      placeholder="e.g. Extra napkins, please slice sourdough"
-                      className="w-full bg-white border border-[#39251F]/20 px-3 py-2 rounded-sm text-[#39251F] focus:outline-none focus:border-[#C58B52]"
-                    />
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setActivePaymentTab('upi')}
+                        className={`p-3 rounded-sm border text-left flex items-start gap-2.5 transition-all cursor-pointer ${
+                          activePaymentTab === 'upi'
+                            ? 'bg-[#1E2024] text-white border-[#5f259f] shadow-md'
+                            : 'bg-white text-[#39251F] border-[#39251F]/15 hover:border-[#39251F]/30'
+                        }`}
+                      >
+                        <div className="w-5 h-5 rounded-full bg-[#5f259f] text-white text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">
+                          पे
+                        </div>
+                        <div>
+                          <p className="font-bold text-xs">PhonePe / UPI QR</p>
+                          <p className={`text-[10px] ${activePaymentTab === 'upi' ? 'text-white/70' : 'text-[#76584C]'}`}>
+                            Dynamic QR for ₹{finalTotal}
+                          </p>
+                        </div>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setActivePaymentTab('cod')}
+                        className={`p-3 rounded-sm border text-left flex items-start gap-2.5 transition-all cursor-pointer ${
+                          activePaymentTab === 'cod'
+                            ? 'bg-[#39251F] text-white border-[#C58B52] shadow-md'
+                            : 'bg-white text-[#39251F] border-[#39251F]/15 hover:border-[#39251F]/30'
+                        }`}
+                      >
+                        <CreditCard className="w-5 h-5 text-[#C58B52] shrink-0 mt-0.5" />
+                        <div>
+                          <p className="font-bold text-xs">Cash on Delivery</p>
+                          <p className={`text-[10px] ${activePaymentTab === 'cod' ? 'text-white/70' : 'text-[#76584C]'}`}>
+                            Pay ₹{finalTotal} on doorstep
+                          </p>
+                        </div>
+                      </button>
+                    </div>
                   </div>
+
+                  {/* If UPI is selected, embed the dynamic QR inside the checkout modal */}
+                  {activePaymentTab === 'upi' && (
+                    <div className="pt-2 animate-fade-in">
+                      <UpiPaymentQr
+                        amount={finalTotal}
+                        onPaymentSuccess={handleUpiPaymentCompleted}
+                        compact={true}
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <div className="p-4 bg-[#39251F]/5 rounded-sm border border-[#39251F]/10 text-xs text-[#39251F] flex items-center justify-between">
                   <div>
-                    <span className="font-semibold block">Total to Pay on Delivery:</span>
-                    <span className="text-[#76584C]">{items.length} items included</span>
+                    <span className="font-semibold block">Total Amount to Pay:</span>
+                    <span className="text-[#76584C]">{items.length} artisan treats included</span>
                   </div>
-                  <span className="font-serif text-xl font-bold text-[#39251F]">
+                  <span className="font-serif text-2xl font-bold text-[#39251F]">
                     ₹{finalTotal}
                   </span>
                 </div>
@@ -542,7 +632,7 @@ export const CartPage: React.FC = () => {
                     className="flex-1 bg-[#C58B52] hover:bg-[#B27941] text-[#FFF5E8] text-xs font-bold py-3 rounded-sm transition-colors shadow-sm flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <Check className="w-4 h-4" />
-                    <span>Place Bakery Order</span>
+                    <span>Confirm Order (₹{finalTotal})</span>
                   </button>
                 </div>
               </form>
@@ -555,7 +645,7 @@ export const CartPage: React.FC = () => {
 
                 <div>
                   <span className="text-xs uppercase tracking-[0.2em] font-semibold text-[#89977A]">
-                    Order Reserved
+                    Order Reserved & Confirmed
                   </span>
                   <h2 className="font-serif text-3xl font-bold text-[#39251F] mt-1">
                     Thank You, {orderDetails.name}!
@@ -569,8 +659,12 @@ export const CartPage: React.FC = () => {
                 <div className="bg-white border border-[#39251F]/15 p-6 rounded-sm text-left text-xs text-[#39251F] space-y-3 relative shadow-xs">
                   <div className="flex items-center justify-between border-b border-[#39251F]/10 pb-3">
                     <div>
-                      <span className="text-[10px] uppercase text-[#76584C] font-semibold">Order Reference</span>
-                      <p className="font-mono font-bold text-sm text-[#39251F]">{orderDetails.orderNumber}</p>
+                      <span className="text-[10px] uppercase text-[#76584C] font-semibold">
+                        Order Reference
+                      </span>
+                      <p className="font-mono font-bold text-sm text-[#39251F]">
+                        {orderDetails.orderNumber}
+                      </p>
                     </div>
                     <Receipt className="w-5 h-5 text-[#C58B52]" />
                   </div>
@@ -581,10 +675,17 @@ export const CartPage: React.FC = () => {
                       <p className="font-semibold">{orderDetails.deliverySlot}</p>
                     </div>
                     <div>
-                      <span className="text-[#76584C]">Payment:</span>
-                      <p className="font-semibold">{orderDetails.paymentMode}</p>
+                      <span className="text-[#76584C]">Payment Status:</span>
+                      <p className="font-semibold text-emerald-700">{orderDetails.paymentMode}</p>
                     </div>
                   </div>
+
+                  {orderDetails.paymentReference && (
+                    <div className="text-[11px] bg-[#FFF5E8] p-2 rounded-xs border border-[#39251F]/10">
+                      <span className="text-[#76584C]">UPI UTR / Reference: </span>
+                      <span className="font-mono font-bold text-[#39251F]">{orderDetails.paymentReference}</span>
+                    </div>
+                  )}
 
                   <div className="text-[11px]">
                     <span className="text-[#76584C]">Destination:</span>
@@ -601,7 +702,7 @@ export const CartPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={handleFinishAndClear}
-                    className="w-full bg-[#39251F] hover:bg-[#2A1A15] text-[#FFF5E8] font-bold text-xs py-3.5 rounded-sm transition-colors shadow-sm"
+                    className="w-full bg-[#39251F] hover:bg-[#2A1A15] text-[#FFF5E8] font-bold text-xs py-3.5 rounded-sm transition-colors shadow-sm cursor-pointer"
                   >
                     Return to Bakery Storefront
                   </button>
